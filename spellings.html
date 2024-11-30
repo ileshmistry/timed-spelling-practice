@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spelling Practice</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    .container {
+      width: 300px;
+    }
+    #instructions, #timer, #feedback, #question, #results {
+      margin-bottom: 15px;
+    }
+    input[type="file"], textarea, input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      font-size: 1em;
+      margin-bottom: 15px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 1em;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Spelling Practice</h1>
+    <div id="instructions">
+      
+      <p>Upload a CSV or paste a list of words.</p>
+
+      <!-- Option for file upload -->
+      <label for="csvUpload">Upload CSV File (one word per line):</label>
+      <input type="file" id="csvUpload" accept=".csv" onchange="handleFileUpload(event)">
+      
+      <!-- Or paste list -->
+      <label for="pasteWords">Or paste list of words:</label>
+      <textarea id="pasteWords" placeholder="Paste here, one word per line" rows="6">
+accident
+calendar
+mention
+possession
+straight
+eight
+guide
+accidentally
+caught
+eighth
+minute
+possible
+strange
+heard
+actual
+centre
+enough
+natural
+potatoes
+strength
+heart
+actually
+century
+exercise
+height
+naughty
+pressure
+suppose
+address
+certain
+experience
+history
+notice
+probably
+surprise
+although
+circle
+experiment
+imagine
+occasion
+promise
+therefore
+answer
+complete
+extreme
+important
+occasionally
+purpose
+though
+appear
+consider
+famous
+increase
+often
+quarter
+thought
+arrive
+continue
+favourite
+interest
+opposite
+question
+through
+believe
+decide
+February
+island
+ordinary
+recent
+various
+bicycle
+describe
+forward
+knowledge
+particular
+regular
+weight
+breath
+different
+forwards
+learn
+peculiar
+reign
+woman
+breathe
+difficult
+fruit
+length
+perhaps
+remember
+women
+build
+disappear
+grammar
+library
+popular
+sentence
+busy
+early
+group
+material
+position
+separate
+business
+earth
+guard
+medicine
+possess
+special
+      </textarea>
+      
+      <button onclick="startTest()">Start Test</button>
+    </div>
+
+    <div id="timer"></div>
+    <div id="question"></div>
+    <button id="readAgainButton" onclick="readWordAgain()" style="display: none; margin-bottom: 10px;">Repeat word</button>
+    <input type="text" id="answerInput" placeholder="Type the word here" style="display: none;">
+    <button id="nextButton" onclick="checkAnswer()" style="display: none;">Submit</button>
+    <div id="feedback"></div>
+    <div id="results"></div>
+  </div>
+
+  <script>
+    let words = [];
+    let currentWordIndex = 0;
+    let score = 0;
+    let countdown = 10;
+    let countdownInterval;
+    let results = [];
+
+    // Handle file upload and parse CSV
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const text = e.target.result;
+          words = text.split('\n').map(word => word.trim()).filter(word => word !== '');
+        };
+        reader.readAsText(file);
+      }
+    }
+
+    // Start the test with either uploaded or pasted words
+    function startTest() {
+      const pastedText = document.getElementById("pasteWords").value;
+      if (pastedText) {
+        words = pastedText.split('\n').map(word => word.trim()).filter(word => word !== '');
+      }
+
+      if (words.length === 0) {
+        alert("Please upload or paste a list of words.");
+        return;
+      }
+
+      // Hide setup elements and start the test
+      document.getElementById("instructions").style.display = "none";
+      document.getElementById("answerInput").style.display = "inline";
+      document.getElementById("nextButton").style.display = "inline";
+      document.getElementById("readAgainButton").style.display = "inline";
+      document.getElementById("results").innerHTML = "";
+      currentWordIndex = 0;
+      score = 0;
+      nextWord();
+    }
+
+    // Move to next word and play audio for the word
+    function nextWord() {
+      clearInterval(countdownInterval);
+      countdown = 10;
+      updateTimer();
+      
+      if (currentWordIndex < words.length) {
+        const currentWord = words[currentWordIndex];
+        document.getElementById("question").innerText = `Spell the word`;
+        
+        // Read the word out loud
+        readWord(currentWord);
+
+        // Clear the answer input field before moving to the next word
+        document.getElementById("answerInput").value = "";
+        document.getElementById("answerInput").focus();  // Focus the input field for the next word
+
+        countdownInterval = setInterval(() => {
+          countdown--;
+          updateTimer();
+          if (countdown <= 0) {
+            clearInterval(countdownInterval);
+            checkAnswer(true);  // Automatically check answer if time runs out
+          }
+        }, 1000);
+      } else {
+        endTest();
+      }
+    }
+
+    // Read the word out loud
+    function readWord(word) {
+      const utterance = new SpeechSynthesisUtterance(word);
+      speechSynthesis.speak(utterance);
+    }
+
+    // Allow the user to ask for the word to be read again
+    function readWordAgain() {
+      if (currentWordIndex < words.length) {
+        const currentWord = words[currentWordIndex];
+        readWord(currentWord);
+      }
+    }
+
+    // Check the answer (for time expired or user input)
+    function checkAnswer(timeExpired = false) {
+      const currentWord = words[currentWordIndex];
+      const userAnswer = document.getElementById("answerInput").value.trim().toLowerCase();
+      let correct = false;
+
+      // Check if the student's answer is correct
+      if (!timeExpired && userAnswer === currentWord.toLowerCase()) {
+        score++;
+        correct = true;
+        document.getElementById("feedback").innerText = "Correct!";
+        document.getElementById("feedback").style.color = "green";
+      } else if (timeExpired) {
+        document.getElementById("feedback").innerText = "Time's up!";
+        document.getElementById("feedback").style.color = "red";
+      } else {
+        document.getElementById("feedback").innerText = "Incorrect!";
+        document.getElementById("feedback").style.color = "red";
+      }
+
+      // Store the result of the current word
+      results.push({
+        word: currentWord,
+        userAnswer: timeExpired ? "No answer (Time's up)" : userAnswer,
+        correctAnswer: currentWord,
+        isCorrect: correct
+      });
+
+      currentWordIndex++;
+      setTimeout(nextWord, 1000); // Move to next word after a short delay
+    }
+
+    // Update the countdown timer display
+    function updateTimer() {
+      document.getElementById("timer").innerText = `Time remaining: ${countdown}s`;
+    }
+
+    // End the test and display results
+    function endTest() {
+      document.getElementById("question").innerText = "";
+      document.getElementById("timer").innerText = "";
+      document.getElementById("answerInput").style.display = "none";
+      document.getElementById("nextButton").style.display = "none";
+      document.getElementById("readAgainButton").style.display = "none";
+      document.getElementById("feedback").innerText = "";
+      
+      // Display overall score and detailed results
+      document.getElementById("results").innerHTML = `<h3>Results</h3>
+        <p>You spelled ${score} out of ${words.length} words correctly.</p>
+        <h4>Detailed Results:</h4>`;
+
+      results.forEach((result, index) => {
+        const color = result.isCorrect ? "green" : "red";
+        document.getElementById("results").innerHTML += `
+          <p style="color: ${color}">
+            ${index + 1}. ${result.word} = ${result.userAnswer} 
+            ${result.isCorrect ? "(Correct)" : `(Incorrect, Correct Answer: ${result.correctAnswer})`}
+          </p>`;
+      });
+    }
+  </script>
+</body>
+</html>
